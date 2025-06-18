@@ -1,0 +1,7 @@
+openai
+langchain
+pymupdf
+pandas
+python-dotenv
+chromadb
+faiss-cpu
