@@ -1,23 +1,42 @@
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+from .config import OPENAI_API_KEY
+import json
 
-prompt = ChatPromptTemplate.from_template("""
-# Extract the following structured information from the resume text:
-# - Name
-# - Contact Information
-# - Skills
-# - Education
-# - Work Experience
-# - Total years of relevant experience
+def parse_resume_with_gpt(resume_text: str) -> dict:
+    """
+    Uses GPT-4o via LangChain to extract structured info from resume text.
+    Returns a dictionary with the extracted fields.
+    """
+    # Prompt template for extracting structured resume information
+    prompt = ChatPromptTemplate.from_template("""
+    Extract the following information from this resume text as a valid JSON object with these fields:
+      - name
+      - contact_information
+      - skills
+      - education
+      - work_experience
+      - years_of_experience
 
-Resume text:
-{resume_text}
-""")
+    Resume text:
+    {resume_text}
+    """)
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    # Initialize the LLM
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        temperature=0,
+        openai_api_key=OPENAI_API_KEY
+    )
 
-chain = prompt | llm
+    # Run prompt + LLM
+    chain = prompt | llm
+    response = chain.invoke({"resume_text": resume_text})
 
-resume_text = extract_text_from_pdf("resume.pdf")
-structured_data = chain.invoke({"resume_text": resume_text})
-print(structured_data.content)
+    # Try to parse the response as JSON
+    try:
+        result = json.loads(response.content)
+    except Exception:
+        # Fallback: print as raw text if not valid JSON
+        result = {"raw_response": response.content}
+    return result
