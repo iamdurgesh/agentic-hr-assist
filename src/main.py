@@ -1,46 +1,49 @@
 import sys
 import os
-import pandas as pd
-
 from dotenv import load_dotenv
 from resume_parser import extract_text_from_pdf
-from agent import parse_resume_with_gpt
-
-def save_to_csv(data, out_path):
-    """
-    Saves extracted resume data (dict or JSON string) to a CSV file.
-    """
-    if isinstance(data, str):
-        import json
-        data = json.loads(data)
-    df = pd.DataFrame([data])
-    df.to_csv(out_path, index=False)
-    print(f"\nData saved to {out_path}")
+from agent import get_resume_parser
 
 def main():
     load_dotenv()
+
+    # Argument parsing
     if len(sys.argv) < 2:
-        print("Usage: python main.py path_to_resume.pdf [output.csv]")
+        print("Usage: python main.py path_to_resume.pdf [backend: langchain|openai]")
         sys.exit(1)
+
     pdf_path = sys.argv[1]
+    preferred_backend = sys.argv[2] if len(sys.argv) >= 3 else "langchain"
+
     if not os.path.isfile(pdf_path):
         print(f"File not found: {pdf_path}")
         sys.exit(1)
 
-    print(f"Parsing {pdf_path} ...")
+    # Extract resume text
+    print(f"\nExtracting text from '{pdf_path}'...")
+    resume_text = extract_text_from_pdf(pdf_path)
+
+    # Choose and initialize agent
+    print(f"Using backend: {preferred_backend}")
     try:
-        resume_text = extract_text_from_pdf(pdf_path)
-        print("Extracting structured info using AI agent...")
-        structured = parse_resume_with_gpt(resume_text)
-        print("\n=== Extracted Information ===\n")
-        print(structured)
-        # Optional: Save to CSV if output path is provided
-        if len(sys.argv) >= 3:
-            out_csv = sys.argv[2]
-            save_to_csv(structured, out_csv)
-    except Exception as e:
-        print(f"Error: {e}")
+        parser = get_resume_parser(preferred=preferred_backend)
+    except ImportError as e:
+        print(f"Agent initialization error: {e}")
         sys.exit(1)
+
+    # Parse resume
+    print("\nParsing resume with AI agent...\n")
+    result = parser.parse_resume(resume_text)
+
+    print("=== Extracted Candidate Information ===\n")
+    print(result)
+
+    # Optional: save to CSV
+    if isinstance(result, dict) and "raw_response" not in result and len(sys.argv) >= 4:
+        import pandas as pd
+        csv_path = sys.argv[3]
+        pd.DataFrame([result]).to_csv(csv_path, index=False)
+        print(f"\nStructured data saved to {csv_path}")
 
 if __name__ == "__main__":
     main()
