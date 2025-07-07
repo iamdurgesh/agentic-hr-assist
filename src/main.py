@@ -5,45 +5,53 @@ from resume_parser import extract_text_from_pdf
 from agent import get_resume_parser
 
 def main():
-    load_dotenv()
+    load_dotenv()  # Load .env for API keys
 
-    # Argument parsing
+    # Parse command-line arguments
     if len(sys.argv) < 2:
-        print("Usage: python main.py path_to_resume.pdf [backend: langchain|openai]")
+        print("Usage: python main.py <resume.pdf> [backend: langchain|openai] [output.csv]")
         sys.exit(1)
 
     pdf_path = sys.argv[1]
     preferred_backend = sys.argv[2] if len(sys.argv) >= 3 else "langchain"
+    output_csv = sys.argv[3] if len(sys.argv) >= 4 else None
 
+    # Check if PDF exists
     if not os.path.isfile(pdf_path):
-        print(f"File not found: {pdf_path}")
+        print(f"Error: File not found: {pdf_path}")
         sys.exit(1)
 
-    # Extract resume text
-    print(f"\nExtracting text from '{pdf_path}'...")
+    # Extract text from PDF
+    print(f"Extracting text from '{pdf_path}'...")
     resume_text = extract_text_from_pdf(pdf_path)
 
-    # Choose and initialize agent
-    print(f"Using backend: {preferred_backend}")
+    # Get the agent
+    print(f"Using agent backend: {preferred_backend}")
     try:
         parser = get_resume_parser(preferred=preferred_backend)
     except ImportError as e:
-        print(f"Agent initialization error: {e}")
+        print(f"Error initializing agent: {e}")
         sys.exit(1)
 
     # Parse resume
-    print("\nParsing resume with AI agent...\n")
+    print("Parsing resume using AI agent...\n")
     result = parser.parse_resume(resume_text)
 
     print("=== Extracted Candidate Information ===\n")
-    print(result)
+    if isinstance(result, dict):
+        import json
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(result)
 
-    # Optional: save to CSV
-    if isinstance(result, dict) and "raw_response" not in result and len(sys.argv) >= 4:
-        import pandas as pd
-        csv_path = sys.argv[3]
-        pd.DataFrame([result]).to_csv(csv_path, index=False)
-        print(f"\nStructured data saved to {csv_path}")
+    # Optionally, save to CSV
+    if output_csv and isinstance(result, dict) and "raw_response" not in result:
+        try:
+            import pandas as pd
+            pd.DataFrame([result]).to_csv(output_csv, index=False)
+            print(f"\nStructured data saved to '{output_csv}'")
+        except Exception as e:
+            print(f"Error saving to CSV: {e}")
 
 if __name__ == "__main__":
     main()
