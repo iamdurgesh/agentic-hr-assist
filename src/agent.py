@@ -1,9 +1,8 @@
-import os
 import json
 from abc import ABC, abstractmethod
 from .config import OPENAI_API_KEY
 
-# Optional imports for LangChain and OpenAI
+# Try to import langchain-openai and openai, set flags
 try:
     from langchain_openai import ChatOpenAI
     from langchain.prompts import ChatPromptTemplate
@@ -17,24 +16,21 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-
-# ----------- Abstraction Layer -----------
+# === Abstraction Layer ===
 
 class LLMBaseAgent(ABC):
     """
-    Abstract LLM agent interface for resume parsing.
+    Abstract base class for all resume parsing LLM agents.
     """
-
     @abstractmethod
     def parse_resume(self, resume_text: str) -> dict:
         pass
 
-
 class LangChainAgent(LLMBaseAgent):
     def __init__(self, api_key: str, model: str = "gpt-4o"):
-        self.api_key = api_key
-        self.model = model
-        self.prompt_template = ChatPromptTemplate.from_template("""
+        self.llm = ChatOpenAI(model=model, temperature=0, openai_api_key=api_key)
+        self.prompt = ChatPromptTemplate.from_template(
+            """
 Extract the following information from the resume below and format it as a valid, minified JSON object using these exact fields:
   - name
   - contact_information
@@ -45,20 +41,16 @@ Extract the following information from the resume below and format it as a valid
 
 Resume text:
 {resume_text}
-""")
-        self.llm = ChatOpenAI(
-            model=self.model,
-            temperature=0,
-            openai_api_key=self.api_key
+            """
         )
 
     def parse_resume(self, resume_text: str) -> dict:
-        chain = self.prompt_template | self.llm
+        chain = self.prompt | self.llm
         response = chain.invoke({"resume_text": resume_text})
-        content = response.content
-        return self._parse_json_response(content)
+        return self._parse_json_response(response.content)
 
-    def _parse_json_response(self, content: str) -> dict:
+    @staticmethod
+    def _parse_json_response(content: str) -> dict:
         cleaned = content.strip()
         if cleaned.startswith("```json"):
             cleaned = cleaned.replace("```json", "").replace("```", "").strip()
@@ -68,7 +60,6 @@ Resume text:
             return json.loads(cleaned)
         except Exception:
             return {"raw_response": content}
-
 
 class OpenAIAgent(LLMBaseAgent):
     def __init__(self, api_key: str, model: str = "gpt-4o"):
@@ -87,7 +78,7 @@ Extract the following information from the resume below and format it as a valid
 
 Resume text:
 {resume_text}
-"""
+        """
         system_message = {
             "role": "system",
             "content": "You are an expert HR assistant. Only respond with valid, minified JSON as requested."
@@ -105,7 +96,8 @@ Resume text:
         content = completion.choices[0].message.content.strip()
         return self._parse_json_response(content)
 
-    def _parse_json_response(self, content: str) -> dict:
+    @staticmethod
+    def _parse_json_response(content: str) -> dict:
         cleaned = content.strip()
         if cleaned.startswith("```json"):
             cleaned = cleaned.replace("```json", "").replace("```", "").strip()
@@ -116,14 +108,11 @@ Resume text:
         except Exception:
             return {"raw_response": content}
 
-
-# ----------- Factory Function -----------
+# === Agent Factory ===
 
 def get_resume_parser(preferred: str = "langchain") -> LLMBaseAgent:
     """
-    Returns the desired resume parsing agent.
-    :param preferred: "langchain" or "openai"
-    :return: instance of LLMBaseAgent
+    Returns the requested resume parser agent.
     """
     if preferred == "langchain" and LANGCHAIN_AVAILABLE:
         return LangChainAgent(api_key=OPENAI_API_KEY)
@@ -134,5 +123,5 @@ def get_resume_parser(preferred: str = "langchain") -> LLMBaseAgent:
     elif OPENAI_AVAILABLE:
         return OpenAIAgent(api_key=OPENAI_API_KEY)
     else:
-        raise ImportError("No available LLM agent backend found. Please install langchain and/or openai.")
+        raise ImportError("No suitable LLM agent backend found. Please install langchain-openai and/or openai.")
 
