@@ -1,8 +1,9 @@
+# src/agent.py
+
 import json
 from abc import ABC, abstractmethod
 from .config import OPENAI_API_KEY
 
-# Try to import langchain-openai and openai, set flags
 try:
     from langchain_openai import ChatOpenAI
     from langchain.prompts import ChatPromptTemplate
@@ -16,12 +17,7 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-# === Abstraction Layer ===
-
 class LLMBaseAgent(ABC):
-    """
-    Abstract base class for all resume parsing LLM agents.
-    """
     @abstractmethod
     def parse_resume(self, resume_text: str) -> dict:
         pass
@@ -108,8 +104,6 @@ Resume text:
         except Exception:
             return {"raw_response": content}
 
-# === Agent Factory ===
-
 def get_resume_parser(preferred: str = "langchain") -> LLMBaseAgent:
     """
     Returns the requested resume parser agent.
@@ -124,4 +118,3 @@ def get_resume_parser(preferred: str = "langchain") -> LLMBaseAgent:
         return OpenAIAgent(api_key=OPENAI_API_KEY)
     else:
         raise ImportError("No suitable LLM agent backend found. Please install langchain-openai and/or openai.")
-
