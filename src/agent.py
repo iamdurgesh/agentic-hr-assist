@@ -1,11 +1,9 @@
-# src/agent.py
-
 import json
 from abc import ABC, abstractmethod
 from .config import OPENAI_API_KEY
 
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_openai.chat_models import ChatOpenAI
     from langchain.prompts import ChatPromptTemplate
     LANGCHAIN_AVAILABLE = True
 except ImportError:
