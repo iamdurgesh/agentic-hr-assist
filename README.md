@@ -3,7 +3,6 @@
 #**Features:**
 
 **Parse PDF resumes into structured JSON (name, contact, skills, education, experience, years).
-
 Export parsed results into CSV for HR workflow integration.
 Extract keywords/keyphrases from any document (PDF, DOCX, TXT, MD).
 Multiple backends:
