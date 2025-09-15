@@ -9,4 +9,4 @@ Multiple backends:
 LangChain (langchain-openai)
 OpenAI API (openai)
 Local TF-IDF fallback (no API required).
-Modular design (agents, resume parser, keyword extractor separated).**
+Modular design (agents, resume parser, keyword extractor separated).
