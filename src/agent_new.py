@@ -116,3 +116,5 @@ def get_resume_parser(preferred: str = "langchain") -> LLMBaseAgent:
         return OpenAIAgent(api_key=OPENAI_API_KEY)
     else:
         raise ImportError("No suitable LLM agent backend found. Please install langchain-openai and/or openai.")
+    
+    
